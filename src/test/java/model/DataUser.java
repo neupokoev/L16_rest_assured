@@ -1,9 +1,17 @@
 package model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DataUser {
-    public Integer id;
-    public String name;
-    public Integer year;
-    public String color;
-    public String pantone_value;
+    private Integer id;
+    private String name;
+    private Integer year;
+    private String color;
+
+    @JsonProperty("pantone_value")
+    private String pantoneValue;
 }

@@ -1,30 +1,33 @@
 import io.restassured.response.Response;
 import model.ColorList;
+import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
-import static io.restassured.http.ContentType.JSON;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.text.IsEmptyString.emptyString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static specs.Specs.requestSpecCommon;
+import static specs.Specs.responseSpecCommon;
 
 public class RestAssuredTests {
 
-    final static String BASE_URL = "https://reqres.in";
-
     @Test
-    void checkIdAndName() {
+    void checkIdAndNameWithGroovy() {
         // @formatter:off
         given().
-                baseUri(BASE_URL).
-                log().uri().
+                spec(requestSpecCommon).
         when()
-                .get("/api/users/3").
+                .get("/users").
         then()
-                .statusCode(200)
-                .body("data.id", is(3))
-                .body("data.first_name", is("Emma"));
+                .spec(responseSpecCommon)
+                .body("data.findAll{it.id}.id.flatten()", hasItems(greaterThan(0), lessThan(7)))
+                .body("data.findAll{it.first_name}.first_name.flatten()", hasItem("Emma"));
         // @formatter:on
     }
 
@@ -32,56 +35,55 @@ public class RestAssuredTests {
     void check404StatusCode() {
         // @formatter:off
         given().
-                baseUri(BASE_URL).
-                log().uri().
+                spec(requestSpecCommon).
         when()
-                .get("/api/users/23").
+                .get("/users/23").
         then()
                 .statusCode(404);
         // @formatter:on
     }
 
     @Test
-    void checkListName() {
+    void checkListNameCombo() {
         ColorList colorList =
                 // @formatter:off
                 given().
-                        baseUri(BASE_URL).
-                        log().uri().
+                        spec(requestSpecCommon).
                 when()
-                        .get("/api/unknown").
+                        .get("/unknown").
                 then()
-                        .statusCode(200)
+                        .spec(responseSpecCommon)
                         .body("total", is(12))
                         .extract().response().as(ColorList.class);
-        // @formatter:on
+                // @formatter:on
 
-        assertThat(colorList.data.size()).
+        assertThat(colorList.getData().size()).
                 withFailMessage("Size of array is not equal expected value!").
                 isEqualTo(6);
 
-        assertEquals(colorList.data.get(0).id, 1);
-        assertEquals(colorList.data.get(0).name, "cerulean");
+        assertEquals(colorList.getData().get(0).getId(), 1);
+        assertEquals(colorList.getData().get(0).getName(), "cerulean");
     }
 
     @Test
     void checkCodeFromPost() {
+        // use org.json JSONObject to define json
+        JSONObject jsonObj = new JSONObject()
+                .put("name", "morpheus")
+                .put("job", "leader");
+
         Response response =
                 // @formatter:off
                 given().
-                        baseUri(BASE_URL)
-                        .contentType(JSON)
-                        .body("{" +
-                                "    \"name\": \"morpheus\"," +
-                                "    \"job\": \"leader\"" +
-                                "}").
+                        spec(requestSpecCommon).
+                        body(jsonObj.toString()).
                 when()
-                        .post("/api/users").
+                        .post("/users").
                 then()
                         .statusCode(201)
                         .body("name", is("morpheus"))
                         .extract().response();
-        // @formatter:on
+                // @formatter:on
 
         assertEquals(response.body().path("job"), "leader");
     }
@@ -90,10 +92,9 @@ public class RestAssuredTests {
     void checkStatusCodeAfterDelete() {
         // @formatter:off
         given().
-                baseUri(BASE_URL).
-                log().uri().
+                spec(requestSpecCommon).
         when()
-                .delete("/api/users/2").
+                .delete("/users/2").
         then()
                 .statusCode(204)
                 .body(is(emptyString()));
@@ -105,14 +106,13 @@ public class RestAssuredTests {
         String responseString =
                 // @formatter:off
                 given().
-                        baseUri(BASE_URL).
-                        log().uri().
+                        spec(requestSpecCommon).
                 when()
-                        .delete("/api/users/2").
+                        .delete("/users/2").
                 then()
                         .statusCode(204)
                         .extract().asString();
-        //@formatter:on
+                //@formatter:on
         assertThat(responseString).isEmpty();
     }
 }
